@@ -104,7 +104,7 @@ def underline(s: str, star_if_ascii_only: bool = False) -> str:
     if s and not ascii_only:
         return EscapeCodes.UNDERLINE + s + EscapeCodes.ENDC
     elif s and star_if_ascii_only:
-        return s + " *"
+        return f"{s} *"
     else:
         return s
 
@@ -147,7 +147,7 @@ def get_pretty_choices(*choices: str) -> str:
             return colored(c, EscapeCodes.GREEN)
         elif c.lower() == 'yq':
             return colored(c[0], EscapeCodes.GREEN) + colored(c[1], EscapeCodes.RED)
-        elif c.lower() in ('n', 'q'):
+        elif c.lower() in {'n', 'q'}:
             return colored(c, EscapeCodes.RED)
         else:
             return colored(c, EscapeCodes.ORANGE)
@@ -158,7 +158,10 @@ def debug(msg: Optional[str] = None) -> None:
     if debug_mode:
         function_name = bold(inspect.stack()[1].function)
         args, _, _, values = inspect.getargvalues(inspect.stack()[1].frame)
-        function_args = bold(f"({', '.join([arg+'='+str(values[arg]) if arg != 'self' else 'self' for arg in args])})")
+        function_args = bold(
+            f"({', '.join([f'{arg}={str(values[arg])}' if arg != 'self' else 'self' for arg in args])})"
+        )
+
         if msg is None:
             print(f"{function_name}{function_args}", file=sys.stderr)
         else:

@@ -82,8 +82,7 @@ def __get_github_token() -> Optional[str]:
         # with non-zero exit code on failure
         result = proc.stderr.decode()
 
-        match = re.search(r"Token: (\w+)", result)
-        if match:
+        if match := re.search(r"Token: (\w+)", result):
             return match.groups()[0]
 
         return None
@@ -94,14 +93,7 @@ def __get_github_token() -> Optional[str]:
         if os.path.isfile(config_hub_path):
             with open(config_hub_path) as config_hub:
                 config_hub_content: str = config_hub.read()
-                # ~/.config/hub is a yaml file, with a structure similar to:
-                #
-                # {domain}:
-                # - user: {username}
-                #   oauth_token: *******************
-                #   protocol: {protocol}
-                match = re.search(r"oauth_token: (\w+)", config_hub_content)
-                if match:
+                if match := re.search(r"oauth_token: (\w+)", config_hub_content):
                     return match.groups()[0]
 
         return None
@@ -130,9 +122,12 @@ def __extract_failure_info_from_422(response: Any) -> str:
         return str(response['message'])
     ret: List[str] = []
     if response.get('errors'):
-        for error in response['errors']:
-            if error.get('message'):
-                ret.append(error['message'])
+        ret.extend(
+            error['message']
+            for error in response['errors']
+            if error.get('message')
+        )
+
     if ret:
         return '\n'.join(ret)
     return str(response)
@@ -145,9 +140,9 @@ def __fire_github_api_request(method: str, path: str, token: Optional[str], requ
         'Accept': 'application/vnd.github.v3+json'
     }
     if token:
-        headers['Authorization'] = 'Bearer ' + token
+        headers['Authorization'] = f'Bearer {token}'
 
-    host = 'https://api.' + GITHUB_DOMAIN
+    host = f'https://api.{GITHUB_DOMAIN}'
     url = host + path
     json_body: Optional[str] = json.dumps(request_body) if request_body else None
     http_request = urllib.request.Request(url, headers=headers, data=json_body.encode() if json_body else None, method=method.upper())
@@ -155,8 +150,7 @@ def __fire_github_api_request(method: str, path: str, token: Optional[str], requ
 
     try:
         with urllib.request.urlopen(http_request) as response:
-            parsed_response_body: Any = json.loads(response.read().decode())
-            return parsed_response_body
+            return json.loads(response.read().decode())
     except urllib.error.HTTPError as err:
         if err.code == http.HTTPStatus.UNPROCESSABLE_ENTITY:
             error_response = json.loads(err.read().decode())
@@ -230,10 +224,7 @@ def set_milestone_of_pull_request(org: str, repo: str, number: int, milestone: s
 def derive_pull_request_by_head(org: str, repo: str, head: LocalBranchShortName) -> Optional[GitHubPullRequest]:
     token: Optional[str] = __get_github_token()
     prs = __fire_github_api_request('GET', f'/repos/{org}/{repo}/pulls?head={org}:{head}', token)
-    if len(prs) >= 1:
-        return __parse_pr_json(prs[0])
-    else:
-        return None
+    return __parse_pr_json(prs[0]) if len(prs) >= 1 else None
 
 
 def derive_pull_requests(org: str, repo: str) -> List[GitHubPullRequest]:
@@ -257,9 +248,8 @@ def is_github_remote_url(url: str) -> bool:
 def get_parsed_github_remote_url(url: str) -> Optional[Tuple[str, str]]:
 
     for pattern in GITHUB_REMOTE_PATTERNS:
-        match = re.match(pattern, url)
-        if match:
-            return match.group(1), match.group(2)
+        if match := re.match(pattern, url):
+            return match[1], match[2]
     return None
 
 

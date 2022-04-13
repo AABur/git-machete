@@ -110,16 +110,12 @@ class MockGitHubAPIState:
         return MockGitHubAPIRequest(self)
 
     def get_issue(self, issue_no: str) -> Optional[Dict[str, Any]]:
-        for issue in self.issues:
-            if issue['number'] == issue_no:
-                return issue
-        return None
+        return next(
+            (issue for issue in self.issues if issue['number'] == issue_no), None
+        )
 
     def get_pull(self, pull_no: str) -> Optional[Dict[str, Any]]:
-        for pull in self.pulls:
-            if pull['number'] == pull_no:
-                return pull
-        return None
+        return next((pull for pull in self.pulls if pull['number'] == pull_no), None)
 
 
 class MockGitHubAPIResponse:
@@ -213,7 +209,7 @@ class MockGitHubAPIRequest:
 
     def fill_pull_request_data(self, data: Dict[str, Any], pull: Dict[str, Any]) -> "MockGitHubAPIResponse":
         index = self.get_index_or_none(pull, self.github_api_state.issues)
-        for key in data.keys():
+        for key in data:
             if key in ('base', 'head'):
                 pull[key]['ref'] = json.loads(self.json_data)[key]
             else:
@@ -237,7 +233,7 @@ class MockGitHubAPIRequest:
 
     def fill_issue_data(self, data: Dict[str, Any], issue: Dict[str, Any]) -> "MockGitHubAPIResponse":
         index = self.get_index_or_none(issue, self.github_api_state.issues)
-        for key in data.keys():
+        for key in data:
             issue[key] = data[key]
         if index is not None:
             self.github_api_state.issues[index] = issue
@@ -269,10 +265,7 @@ class MockGitHubAPIRequest:
 
     @staticmethod
     def find_number(url: str, entity: str) -> Optional[str]:
-        m = re.search(f'{entity}/(\\d+)', url)
-        if m:
-            return m.group(1)
-        return None
+        return m[1] if (m := re.search(f'{entity}/(\\d+)', url)) else None
 
     @staticmethod
     def get_next_free_number(entities: List[Dict[str, Any]]) -> str:
@@ -336,7 +329,7 @@ class GitRepositorySandbox:
         return self
 
     def commit(self, message: str = "Some commit message.") -> "GitRepositorySandbox":
-        f = "%s.txt" % "".join(random.choice(string.ascii_letters) for _ in range(20))
+        f = f'{"".join((random.choice(string.ascii_letters) for _ in range(20)))}.txt'
         self.execute(f"touch {f}")
         self.execute(f"git add {f}")
         self.execute(f'git commit -m "{message}"')
@@ -487,12 +480,12 @@ class MacheteTester(unittest.TestCase):
         self.repo_sandbox.new_branch("root")
         self.rewrite_definition_file(body)
 
-        expected_error_message: str = '.git/machete, line 5: branch `develop` re-appears in the tree definition. ' \
-                                      'Edit the definition file manually with `git machete edit`'
-
         with self.assertRaises(MacheteException) as e:
             self.launch_command('status')
         if e:
+            expected_error_message: str = '.git/machete, line 5: branch `develop` re-appears in the tree definition. ' \
+                                          'Edit the definition file manually with `git machete edit`'
+
             self.assertEqual(e.exception.parameter, expected_error_message,
                              'Verify that expected error message has appeared a branch re-appears in tree definition.')
 

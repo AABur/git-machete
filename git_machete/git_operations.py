@@ -109,8 +109,7 @@ class RemoteBranchFullName(AnyBranchName):
 class FullCommitHash(AnyRevision):
     @staticmethod
     def of(value: str) -> Optional["FullCommitHash"]:
-        value = value.strip()
-        if value:
+        if value := value.strip():
             if len(value) == 40:
                 return FullCommitHash(value)
             else:
@@ -215,9 +214,15 @@ class GitContext:
         # '$GIT_MACHETE_EDITOR', 'editor' (to please Debian-based systems) and 'nano' have been added.
         git_machete_editor_var = "GIT_MACHETE_EDITOR"
         proposed_editor_funs: List[Tuple[str, Callable[[], Optional[str]]]] = [
-            ("$" + git_machete_editor_var, lambda: os.environ.get(git_machete_editor_var)),
+            (
+                f"${git_machete_editor_var}",
+                lambda: os.environ.get(git_machete_editor_var),
+            ),
             ("$GIT_EDITOR", lambda: os.environ.get("GIT_EDITOR")),
-            ("git config core.editor", lambda: self.get_config_attr_or_none("core.editor")),
+            (
+                "git config core.editor",
+                lambda: self.get_config_attr_or_none("core.editor"),
+            ),
             ("$VISUAL", lambda: os.environ.get("VISUAL")),
             ("$EDITOR", lambda: os.environ.get("EDITOR")),
             ("editor", lambda: "editor"),
@@ -225,27 +230,33 @@ class GitContext:
             ("vi", lambda: "vi"),
         ]
 
+
         for name, fun in proposed_editor_funs:
-            editor = fun()
-            if not editor:
-                debug(f"'{name}' is undefined")
-            else:
-                editor_repr = f"'{name}'{(' (' + editor + ')') if editor != name else ''}"
+            if editor := fun():
+                editor_repr = f"'{name}'{f' ({editor})' if editor != name else ''}"
                 if not utils.find_executable(editor):
                     debug(f"{editor_repr} is not available")
-                    if name == "$" + git_machete_editor_var:
+                    if name == f"${git_machete_editor_var}":
                         # In this specific case, when GIT_MACHETE_EDITOR is defined but doesn't point to a valid executable,
                         # it's more reasonable/less confusing to raise an error and exit without opening anything.
                         raise MacheteException(f"<b>{editor_repr}</b> is not available")
                 else:
                     debug(f"{editor_repr} is available")
-                    if name != "$" + git_machete_editor_var and self.get_config_attr_or_none('advice.macheteEditorSelection') != 'false':
+                    if (
+                        name != f"${git_machete_editor_var}"
+                        and self.get_config_attr_or_none(
+                            'advice.macheteEditorSelection'
+                        )
+                        != 'false'
+                    ):
                         sample_alternative = 'nano' if editor.startswith('vi') else 'vi'
                         print(fmt(f"Opening <b>{editor_repr}</b>.\n",
                                   f"To override this choice, use <b>{git_machete_editor_var}</b> env var, e.g. `export {git_machete_editor_var}={sample_alternative}`.\n\n",
                                   "See `git machete help edit` and `git machete edit --debug` for more details.\n\nUse `git config --global advice.macheteEditorSelection false` to suppress this message."), file=sys.stderr)
                     return editor
 
+            else:
+                debug(f"'{name}' is undefined")
         # This case is extremely unlikely on a modern Unix-like system.
         return None
 
@@ -297,7 +308,12 @@ class GitContext:
 
     def get_git_timespec_parsed_to_unix_timestamp(self, date: str) -> int:
         try:
-            return int(self._popen_git("rev-parse", "--since=" + date).replace("--max-age=", "").strip())
+            return int(
+                self._popen_git("rev-parse", f"--since={date}")
+                .replace("--max-age=", "")
+                .strip()
+            )
+
         except (MacheteException, ValueError):
             raise MacheteException(f"Cannot parse timespec: `{date}`")
 
@@ -425,11 +441,14 @@ class GitContext:
         return self.__committer_unix_timestamp_by_revision_cached.get(revision.full_name(), 0)
 
     def get_inferred_remote_for_fetching_of_branch(self, branch: LocalBranchShortName) -> Optional[str]:
-        # Since many people don't use '--set-upstream' flag of 'push', we try to infer the remote instead.
-        for remote in self.get_remotes():
-            if f"{remote}/{branch}" in self.get_remote_branches():
-                return remote
-        return None
+        return next(
+            (
+                remote
+                for remote in self.get_remotes()
+                if f"{remote}/{branch}" in self.get_remote_branches()
+            ),
+            None,
+        )
 
     def get_strict_remote_for_fetching_of_branch(self, branch: LocalBranchShortName) -> Optional[str]:
         remote = self.get_config_attr_or_none(f"branch.{branch}.remote")
@@ -439,10 +458,14 @@ class GitContext:
         return self.get_strict_remote_for_fetching_of_branch(branch) or self.get_inferred_remote_for_fetching_of_branch(branch)
 
     def __get_inferred_counterpart_for_fetching_of_branch(self, branch: LocalBranchShortName) -> Optional[RemoteBranchShortName]:
-        for remote in self.get_remotes():
-            if f"{remote}/{branch}" in self.get_remote_branches():
-                return RemoteBranchShortName.of(f"{remote}/{branch}")
-        return None
+        return next(
+            (
+                RemoteBranchShortName.of(f"{remote}/{branch}")
+                for remote in self.get_remotes()
+                if f"{remote}/{branch}" in self.get_remote_branches()
+            ),
+            None,
+        )
 
     def get_strict_counterpart_for_fetching_of_branch(self, branch: LocalBranchShortName) -> Optional[RemoteBranchShortName]:
         if self.__counterparts_for_fetching_cached is None:
@@ -638,8 +661,7 @@ class GitContext:
             return None
 
     def expect_no_operation_in_progress(self) -> None:
-        remote_branch = self.get_currently_rebased_branch_or_none()
-        if remote_branch:
+        if remote_branch := self.get_currently_rebased_branch_or_none():
             raise MacheteException(
                 f"Rebase of `{remote_branch}` in progress. Conclude the rebase first with `git rebase --continue` or `git rebase --abort`.")
         if self.is_am_in_progress():
@@ -667,7 +689,7 @@ class GitContext:
     def __get_merge_base(self, sha1: FullCommitHash, sha2: FullCommitHash) -> FullCommitHash:
         if sha1 > sha2:
             sha1, sha2 = sha2, sha1
-        if not (sha1, sha2) in self.__merge_base_cached:
+        if (sha1, sha2) not in self.__merge_base_cached:
             # Note that we don't pass '--all' flag to 'merge-base', so we'll get only one merge-base
             # even if there is more than one (in the rare case of criss-cross histories).
             # This is still okay from the perspective of is-ancestor checks that are our sole use of merge-base:
@@ -723,12 +745,10 @@ class GitContext:
         # shows all commits reachable from later_commit_sha but NOT from earlier_commit_sha
         intermediate_tree_shas = utils.get_non_empty_lines(
             self._popen_git(
-                "log",
-                "--format=%T",  # full commit's tree hash
-                "^" + earlier_commit_sha,
-                later_commit_sha
+                "log", "--format=%T", f"^{earlier_commit_sha}", later_commit_sha
             )
         )
+
 
         result = earlier_tree_sha in intermediate_tree_shas
         self.__contains_equivalent_tree_cached[earlier_commit_sha, later_commit_sha] = result
@@ -884,10 +904,9 @@ class GitContext:
         #   `--date=unix` is not available on some older versions of git)
         # %gs - reflog subject
         output = self._popen_git("reflog", "show", "--format=%gd:%gs", "--date=raw")
+        pattern = "^HEAD@\\{([0-9]+) .+\\}:checkout: moving from (.+) to (.+)$"
         for entry in utils.get_non_empty_lines(output):
-            pattern = "^HEAD@\\{([0-9]+) .+\\}:checkout: moving from (.+) to (.+)$"
-            match = re.search(pattern, entry)
-            if match:
+            if match := re.search(pattern, entry):
                 from_branch = match.group(2)
                 to_branch = match.group(3)
                 # Only the latest occurrence for any given branch is interesting

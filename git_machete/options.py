@@ -32,7 +32,7 @@ class CommandLineOptions:
         self.opt_push_tracked: Optional[bool] = True
         self.opt_push_untracked: Optional[bool] = True
         self.opt_return_to: str = "stay"
-        self.opt_roots: List[LocalBranchShortName] = list()
+        self.opt_roots: List[LocalBranchShortName] = []
         self.opt_start_from: str = "here"
         self.opt_stat: bool = False
         self.opt_sync_github_prs: bool = False
