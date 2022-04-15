@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/AABur/git-machete/branch/master/graph/badge.svg?token=FIYZC19DHJ)](https://codecov.io/gh/AABur/git-machete)
+[![codecov](https://codecov.io/gh/AABur/git-machete/branch/code_coverage_report/graph/badge.svg?token=FIYZC19DHJ)](https://codecov.io/gh/AABur/git-machete)
 
 # git-machete
 
