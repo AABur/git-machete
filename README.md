@@ -1,5 +1,3 @@
-[![codecov](https://codecov.io/gh/AABur/git-machete/branch/code_coverage_report/graph/badge.svg?token=FIYZC19DHJ)](https://codecov.io/gh/AABur/git-machete)
-
 # git-machete
 
 [![Read the Docs](https://readthedocs.org/projects/git-machete/badge/?version=latest)](https://git-machete.readthedocs.io/en/stable)
