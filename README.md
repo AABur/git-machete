@@ -9,7 +9,7 @@
 [![CircleCI](https://circleci.com/gh/VirtusLab/git-machete/tree/master.svg?style=shield)](https://app.circleci.com/pipelines/github/VirtusLab/git-machete?branch=master)
 [![codecov](https://codecov.io/gh/AABur/git-machete/branch/code_coverage_report/graph/badge.svg?token=FIYZC19DHJ)](https://codecov.io/gh/AABur/git-machete)
 
-[![codecov](https://codecov.io/gh/AABur/git-machete/branch/ci\\codecov/graph/badge.svg?token=FIYZC19DHJ)](https://codecov.io/gh/AABur/git-machete)
+[![codecov](https://codecov.io/gh/AABur/git-machete/branch/ci/codecov/graph/badge.svg?token=FIYZC19DHJ)](https://codecov.io/gh/AABur/git-machete)
 
 <img src="https://raw.githubusercontent.com/VirtusLab/git-machete/develop/graphics/logo_with_name.svg" style="width: 100%; display: block; margin-bottom: 10pt;" />
 <!-- The image is referenced by full URL, corresponding develop branch to ensure it renders correctly on https://pypi.org/project/git-machete/ -->

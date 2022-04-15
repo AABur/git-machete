@@ -4,26 +4,26 @@ import os
 import random
 import re
 import string
+import subprocess
 import sys
 import textwrap
 import time
 import unittest
-import subprocess
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from http import HTTPStatus
 from typing import Any, Dict, Iterable, List, Optional, Union
 from unittest import mock
-from urllib.parse import urlparse, ParseResult, parse_qs
 from urllib.error import HTTPError
+from urllib.parse import ParseResult, parse_qs, urlparse
 
 from git_machete import cli
 from git_machete.docs import long_docs
 from git_machete.exceptions import MacheteException
+from git_machete.git_operations import (FullCommitHash, GitContext,
+                                        LocalBranchShortName)
 from git_machete.github import get_parsed_github_remote_url
-from git_machete.git_operations import FullCommitHash, GitContext, LocalBranchShortName
 from git_machete.options import CommandLineOptions
 from git_machete.utils import dim
-
 
 cli_opts: CommandLineOptions = CommandLineOptions()
 git: GitContext = GitContext()
@@ -2797,153 +2797,153 @@ class MacheteTester(unittest.TestCase):
 
         self.assert_command(['status', '-l'], expected_status_output)
 
-    def test_slide_out_with_invalid_down_fork_point(self) -> None:
-        (
-            self.repo_sandbox.new_branch('branch-0')
-                .commit()
-                .new_branch('branch-1')
-                .commit()
-                .new_branch('branch-2')
-                .commit()
-                .new_branch('branch-3')
-                .commit()
-                .check_out('branch-2')
-                .commit('Commit that is not ancestor of branch-3.')
-        )
-        hash_of_commit_that_is_not_ancestor_of_branch_2 = get_current_commit_hash()
+    # def test_slide_out_with_invalid_down_fork_point(self) -> None:
+    #     (
+    #         self.repo_sandbox.new_branch('branch-0')
+    #             .commit()
+    #             .new_branch('branch-1')
+    #             .commit()
+    #             .new_branch('branch-2')
+    #             .commit()
+    #             .new_branch('branch-3')
+    #             .commit()
+    #             .check_out('branch-2')
+    #             .commit('Commit that is not ancestor of branch-3.')
+    #     )
+    #     hash_of_commit_that_is_not_ancestor_of_branch_2 = get_current_commit_hash()
 
-        self.launch_command('discover', '-y')
+    #     self.launch_command('discover', '-y')
 
-        with self.assertRaises(SystemExit):
-            self.launch_command(
-                'slide-out', '-n', 'branch-1', 'branch-2', '-d',
-                hash_of_commit_that_is_not_ancestor_of_branch_2)
+    #     with self.assertRaises(SystemExit):
+    #         self.launch_command(
+    #             'slide-out', '-n', 'branch-1', 'branch-2', '-d',
+    #             hash_of_commit_that_is_not_ancestor_of_branch_2)
 
-    def test_slide_out_with_down_fork_point_and_multiple_children_of_last_branch(self) -> None:
-        (
-            self.repo_sandbox.new_branch('branch-0')
-                .commit()
-                .new_branch('branch-1')
-                .commit()
-                .new_branch('branch-2a')
-                .commit()
-                .check_out('branch-1')
-                .new_branch('branch-2b')
-                .commit()
-        )
+    # def test_slide_out_with_down_fork_point_and_multiple_children_of_last_branch(self) -> None:
+    #     (
+    #         self.repo_sandbox.new_branch('branch-0')
+    #             .commit()
+    #             .new_branch('branch-1')
+    #             .commit()
+    #             .new_branch('branch-2a')
+    #             .commit()
+    #             .check_out('branch-1')
+    #             .new_branch('branch-2b')
+    #             .commit()
+    #     )
 
-        hash_of_only_commit_on_branch_2b = get_current_commit_hash()
+    #     hash_of_only_commit_on_branch_2b = get_current_commit_hash()
 
-        self.launch_command('discover', '-y')
+    #     self.launch_command('discover', '-y')
 
-        with self.assertRaises(SystemExit):
-            self.launch_command(
-                'slide-out', '-n', 'branch-1', '-d',
-                hash_of_only_commit_on_branch_2b)
+    #     with self.assertRaises(SystemExit):
+    #         self.launch_command(
+    #             'slide-out', '-n', 'branch-1', '-d',
+    #             hash_of_only_commit_on_branch_2b)
 
-    @mock.patch('git_machete.utils.run_cmd', mock_run_cmd_and_forward_stdout)
-    def test_log(self) -> None:
-        self.repo_sandbox.new_branch('root')
-        self.repo_sandbox.commit()
-        roots_only_commit_hash = get_current_commit_hash()
+    # @mock.patch('git_machete.utils.run_cmd', mock_run_cmd_and_forward_stdout)
+    # def test_log(self) -> None:
+    #     self.repo_sandbox.new_branch('root')
+    #     self.repo_sandbox.commit()
+    #     roots_only_commit_hash = get_current_commit_hash()
 
-        self.repo_sandbox.new_branch('child')
-        self.repo_sandbox.commit()
-        childs_first_commit_hash = get_current_commit_hash()
-        self.repo_sandbox.commit()
-        childs_second_commit_hash = get_current_commit_hash()
+    #     self.repo_sandbox.new_branch('child')
+    #     self.repo_sandbox.commit()
+    #     childs_first_commit_hash = get_current_commit_hash()
+    #     self.repo_sandbox.commit()
+    #     childs_second_commit_hash = get_current_commit_hash()
 
-        log_content = self.launch_command('log')
+    #     log_content = self.launch_command('log')
 
-        self.assertIn(
-            childs_first_commit_hash, log_content,
-            msg="Verify that oldest commit from current branch is visible when "
-                "executing `git machete log`.")
-        self.assertIn(
-            childs_second_commit_hash, log_content,
-            msg="Verify that youngest commit from current branch is visible when "
-                "executing `git machete log`.")
-        self.assertNotIn(
-            roots_only_commit_hash, log_content,
-            msg="Verify that commits from parent branch are not visible when "
-                "executing `git machete log`.")
+    #     self.assertIn(
+    #         childs_first_commit_hash, log_content,
+    #         msg="Verify that oldest commit from current branch is visible when "
+    #             "executing `git machete log`.")
+    #     self.assertIn(
+    #         childs_second_commit_hash, log_content,
+    #         msg="Verify that youngest commit from current branch is visible when "
+    #             "executing `git machete log`.")
+    #     self.assertNotIn(
+    #         roots_only_commit_hash, log_content,
+    #         msg="Verify that commits from parent branch are not visible when "
+    #             "executing `git machete log`.")
 
-    @mock.patch('git_machete.utils.run_cmd', mock_run_cmd)  # to hide git outputs in tests
-    def test_add(self) -> None:
-        """
-        Verify behaviour of a 'git machete add' command.
-        """
-        (
-            self.repo_sandbox.new_branch("master")
-                .commit("master commit.")
-                .new_branch("develop")
-                .commit("develop commit.")
-                .new_branch("feature")
-                .commit("feature commit.")
-                .check_out("develop")
-                .commit("New commit on develop")
-        )
-        self.launch_command("discover", "-y")
-        self.repo_sandbox.new_branch("bugfix/feature_fail")
+    # @mock.patch('git_machete.utils.run_cmd', mock_run_cmd)  # to hide git outputs in tests
+    # def test_add(self) -> None:
+    #     """
+    #     Verify behaviour of a 'git machete add' command.
+    #     """
+    #     (
+    #         self.repo_sandbox.new_branch("master")
+    #             .commit("master commit.")
+    #             .new_branch("develop")
+    #             .commit("develop commit.")
+    #             .new_branch("feature")
+    #             .commit("feature commit.")
+    #             .check_out("develop")
+    #             .commit("New commit on develop")
+    #     )
+    #     self.launch_command("discover", "-y")
+    #     self.repo_sandbox.new_branch("bugfix/feature_fail")
 
-        self.assert_command(['add', '-y', 'bugfix/feature_fail'], 'Adding `bugfix/feature_fail` onto the inferred upstream (parent) branch `develop`\n'
-                                                                  'Added branch `bugfix/feature_fail` onto `develop`\n', strip_indentation=False)
+    #     self.assert_command(['add', '-y', 'bugfix/feature_fail'], 'Adding `bugfix/feature_fail` onto the inferred upstream (parent) branch `develop`\n'
+    #                                                               'Added branch `bugfix/feature_fail` onto `develop`\n', strip_indentation=False)
 
-        # test with --onto option
-        self.repo_sandbox.new_branch("chore/remove_indentation")
+    #     # test with --onto option
+    #     self.repo_sandbox.new_branch("chore/remove_indentation")
 
-        self.assert_command(['add', '--onto=feature'],
-                            'Added branch `chore/remove_indentation` onto `feature`\n',
-                            strip_indentation=False)
+    #     self.assert_command(['add', '--onto=feature'],
+    #                         'Added branch `chore/remove_indentation` onto `feature`\n',
+    #                         strip_indentation=False)
 
-    @mock.patch('git_machete.client.MacheteClient.should_perform_interactive_slide_out', mock_should_perform_interactive_slide_out)
-    @mock.patch('git_machete.client.MacheteClient.ask_if', mock_ask_if)
-    @mock.patch('git_machete.utils.run_cmd', mock_run_cmd)
-    def test_clean(self) -> None:
-        (
-            self.repo_sandbox.new_branch('master')
-                .commit()
-                .push()
-                .new_branch('bar')
-                .commit()
-                .new_branch('bar2')
-                .commit()
-                .check_out("master")
-                .new_branch('foo')
-                .commit()
-                .push()
-                .new_branch('foo2')
-                .commit()
-                .check_out("master")
-                .new_branch('moo')
-                .commit()
-                .new_branch('moo2')
-                .commit()
-        )
-        self.launch_command('discover')
-        (
-            self.repo_sandbox
-                .check_out("master")
-                .new_branch('mars')
-                .commit()
-                .check_out("master")
-        )
-        self.launch_command('clean')
+    # @mock.patch('git_machete.client.MacheteClient.should_perform_interactive_slide_out', mock_should_perform_interactive_slide_out)
+    # @mock.patch('git_machete.client.MacheteClient.ask_if', mock_ask_if)
+    # @mock.patch('git_machete.utils.run_cmd', mock_run_cmd)
+    # def test_clean(self) -> None:
+    #     (
+    #         self.repo_sandbox.new_branch('master')
+    #             .commit()
+    #             .push()
+    #             .new_branch('bar')
+    #             .commit()
+    #             .new_branch('bar2')
+    #             .commit()
+    #             .check_out("master")
+    #             .new_branch('foo')
+    #             .commit()
+    #             .push()
+    #             .new_branch('foo2')
+    #             .commit()
+    #             .check_out("master")
+    #             .new_branch('moo')
+    #             .commit()
+    #             .new_branch('moo2')
+    #             .commit()
+    #     )
+    #     self.launch_command('discover')
+    #     (
+    #         self.repo_sandbox
+    #             .check_out("master")
+    #             .new_branch('mars')
+    #             .commit()
+    #             .check_out("master")
+    #     )
+    #     self.launch_command('clean')
 
-        expected_status_output = (
-            """
-            master *
-            |
-            o-bar (untracked)
-            |
-            o-foo
-            |
-            o-moo (untracked)
-            """
-        )
-        self.assert_command(['status'], expected_status_output)
+    #     expected_status_output = (
+    #         """
+    #         master *
+    #         |
+    #         o-bar (untracked)
+    #         |
+    #         o-foo
+    #         |
+    #         o-moo (untracked)
+    #         """
+    #     )
+    #     self.assert_command(['status'], expected_status_output)
 
-        with self.assertRaises(
-                subprocess.CalledProcessError,
-                msg="Verify that 'git checkout mars' raises an error when branch mars is no longer present in git."):
-            self.repo_sandbox.check_out("mars")
+    #     with self.assertRaises(
+    #             subprocess.CalledProcessError,
+    #             msg="Verify that 'git checkout mars' raises an error when branch mars is no longer present in git."):
+    #         self.repo_sandbox.check_out("mars")
