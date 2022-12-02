@@ -1430,10 +1430,9 @@ class MacheteClient:
         return result
 
     def sync_annotations_to_github_prs(self) -> None:
-        remote, org, repo = self.__derive_remote_and_github_org_and_repo()
+        _, org, repo = self.__derive_remote_and_github_org_and_repo()
         current_user: Optional[str] = git_machete.github.derive_current_user_login()
         debug('Current GitHub user is ' + (current_user or '<none>'))
-        pr: GitHubPullRequest
         all_prs: List[GitHubPullRequest] = derive_pull_requests(org, repo)
         self.__sync_annotations_to_definition_file(all_prs, current_user)
 
@@ -1885,7 +1884,11 @@ class MacheteClient:
             if verbose:
                 print(fmt(opt_yes_msg) if apply_fmt else opt_yes_msg)
             return 'y'
-        return input(fmt(msg) if apply_fmt else msg).lower()
+        try:
+            ans: str = input(fmt(msg) if apply_fmt else msg).lower()
+        except InterruptedError:
+            sys.exit(1)
+        return ans
 
     @staticmethod
     def pick(choices: List[LocalBranchShortName], name: str, apply_fmt: bool = True) -> LocalBranchShortName:
